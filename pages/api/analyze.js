@@ -5,9 +5,9 @@ const pairMap = {
   "AUDUSD": "AUDUSDT",
   "EURUSD": "EURUSDT",
   "GBPUSD": "GBPUSDT",
-  "USDJPY": "USDJPY", // check if available on Binance
-  "USDCHF": "USDCHF", // check if available
-  "USDCAD": "USDCAD", // check if available
+  "USDJPY": "USDJPY", // confirm availability on Binance
+  "USDCHF": "USDCHF", // confirm availability
+  "USDCAD": "USDCAD", // confirm availability
   "NZDUSD": "NZDUSDT"
 };
 
@@ -150,4 +150,4 @@ export default async function handler(req, res) {
   } catch (err) {
     res.status(500).json([{ pair: "ALL", signal: "ERROR", reasons: [err.message] }]);
   }
-}
+  }

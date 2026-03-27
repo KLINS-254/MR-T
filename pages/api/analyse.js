@@ -80,22 +80,18 @@ async function analyzePair(symbol, interval = "1m") {
     const stochastic = calculateStochastic(closes);
 
     const lastClose = candles[candles.length - 1].close;
-    const prevClose = candles[candles.length - 2].close;
 
-    // Indicator checks
-    let indicatorsBuy = 0;
-    let indicatorsSell = 0;
-    let reasons = [];
+    let indicatorsBuy = 0, indicatorsSell = 0, reasons = [];
 
-    // EMA trend
-    if (ema50[ema50.length - 1] > ema200[ema200.length - 1]) { indicatorsBuy++; reasons.push("EMA Trend Bullish"); }
-    else { indicatorsSell++; reasons.push("EMA Trend Bearish"); }
+    // EMA
+    if (ema50[ema50.length - 1] > ema200[ema200.length - 1]) { indicatorsBuy++; reasons.push("EMA Bullish"); }
+    else { indicatorsSell++; reasons.push("EMA Bearish"); }
 
     // RSI
     if (rsi >= 55 && rsi <= 65) { indicatorsBuy++; reasons.push("RSI OK"); }
     else if (rsi >= 35 && rsi <= 45) { indicatorsSell++; reasons.push("RSI OK"); }
 
-    // MACD histogram
+    // MACD
     const macdLast = macdHist[macdHist.length - 1];
     if (macdLast > 0) { indicatorsBuy++; reasons.push("MACD Bullish"); }
     else if (macdLast < 0) { indicatorsSell++; reasons.push("MACD Bearish"); }
@@ -110,30 +106,21 @@ async function analyzePair(symbol, interval = "1m") {
     if (stochLast < 20) { indicatorsBuy++; reasons.push("Stochastic Oversold"); }
     else if (stochLast > 80) { indicatorsSell++; reasons.push("Stochastic Overbought"); }
 
-    // Determine signal based on 4+ indicator agreement
     let signal = "NO TRADE";
     let confidence = 0;
     if (indicatorsBuy >= 4) { signal = "BUY"; confidence = indicatorsBuy * 20; }
     if (indicatorsSell >= 4) { signal = "SELL"; confidence = indicatorsSell * 20; }
 
-    return {
-      pair: symbol,
-      interval,
-      signal,
-      confidence,
-      entry: "Next candle",
-      expiry: "1 minute",
-      reasons
-    };
-  } catch (error) {
-    return { pair: symbol, interval, signal: "ERROR", reasons: [error.message] };
+    return { pair: symbol, interval, signal, confidence, entry: "Next candle", expiry: "1 minute", reasons };
+  } catch (err) {
+    return { pair: symbol, interval, signal: "ERROR", reasons: [err.message] };
   }
 }
 
 export default async function handler(req, res) {
-  const pairs = ["AUDUSDT", "USDJPY", "EURUSDT"];
-  const interval = "1m";
+  const { pairs = "AUDUSDT,USDJPY,EURUSDT", interval = "1m" } = req.query;
+  const pairList = pairs.split(",").map(p => p.trim().toUpperCase());
 
-  const results = await Promise.all(pairs.map(pair => analyzePair(pair, interval)));
+  const results = await Promise.all(pairList.map(pair => analyzePair(pair, interval)));
   res.status(200).json(results);
-    }
+            }

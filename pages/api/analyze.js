@@ -59,17 +59,25 @@ function calculateStochastic(prices, period = 14) {
   return stoch;
 }
 
+// Analyze single pair
 async function analyzePair(symbol, interval = "1m") {
   try {
+    // Ensure symbol ends with 'T' for Binance
+    const binanceSymbol = symbol.endsWith("T") ? symbol : symbol + "T";
+
     const response = await axios.get(
-      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=100`
+      `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=100`
     );
+
+    if (!Array.isArray(response.data)) throw new Error("Invalid data from Binance");
+
     const candles = response.data.map(c => ({
       open: parseFloat(c[1]),
       high: parseFloat(c[2]),
       low: parseFloat(c[3]),
       close: parseFloat(c[4])
     }));
+
     const closes = candles.map(c => c.close);
 
     const ema50 = calculateEMA(closes, 50);
@@ -117,10 +125,17 @@ async function analyzePair(symbol, interval = "1m") {
   }
 }
 
+// API handler
 export default async function handler(req, res) {
-  const { pairs = "AUDUSDT,USDJPY,EURUSDT", interval = "1m" } = req.query;
-  const pairList = pairs.split(",").map(p => p.trim().toUpperCase());
+  try {
+    const { pairs = "AUDUSDT,USDJPY,EURUSDT", interval = "1m" } = req.query;
 
-  const results = await Promise.all(pairList.map(pair => analyzePair(pair, interval)));
-  res.status(200).json(results);
-            }
+    const pairList = pairs.split(",").map(p => p.trim().toUpperCase());
+
+    const results = await Promise.all(pairList.map(pair => analyzePair(pair, interval)));
+
+    res.status(200).json(results);
+  } catch (err) {
+    res.status(500).json([{ pair: "ALL", signal: "ERROR", reasons: [err.message] }]);
+  }
+      }

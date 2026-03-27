@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Quotex Pro Analyzer</title>
+</head>
+<body>
+  <h2>Quotex Pro Multi-Pair Analyzer</h2>
+  <button id="analyzeBtn">Analyze All Pairs</button>
+  <pre id="resultBox"></pre>
+
+  <script>
+    document.getElementById("analyzeBtn").addEventListener("click", async () => {
+      const resultBox = document.getElementById("resultBox");
+      resultBox.textContent = "Analyzing all pairs with 5 indicators...";
+      try {
+        const res = await fetch("/api/analyze");
+        const data = await res.json();
+        let display = "";
+        data.forEach(d => {
+          display += `Pair: ${d.pair} (${d.interval})\nSignal: ${d.signal}\nConfidence: ${d.confidence || "-"}%\nEntry: ${d.entry || "-"}\nExpiry: ${d.expiry || "-"}\nReasons: ${d.reasons.join(", ")}\n\n`;
+        });
+        resultBox.textContent = display;
+      } catch (err) {
+        resultBox.textContent = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

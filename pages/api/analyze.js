@@ -1,5 +1,16 @@
 import axios from "axios";
 
+// Mapping Quotex pairs to Binance symbols
+const pairMap = {
+  "AUDUSD": "AUDUSDT",
+  "EURUSD": "EURUSDT",
+  "GBPUSD": "GBPUSDT",
+  "USDJPY": "USDJPY", // check if available on Binance
+  "USDCHF": "USDCHF", // check if available
+  "USDCAD": "USDCAD", // check if available
+  "NZDUSD": "NZDUSDT"
+};
+
 // EMA calculation
 function calculateEMA(prices, period) {
   let k = 2 / (period + 1);
@@ -59,14 +70,11 @@ function calculateStochastic(prices, period = 14) {
   return stoch;
 }
 
-// Analyze single pair
+// Analyze a single pair safely
 async function analyzePair(symbol, interval = "1m") {
   try {
-    // Ensure symbol ends with 'T' for Binance
-    const binanceSymbol = symbol.endsWith("T") ? symbol : symbol + "T";
-
     const response = await axios.get(
-      `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=100`
+      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=100`
     );
 
     if (!Array.isArray(response.data)) throw new Error("Invalid data from Binance");
@@ -128,14 +136,18 @@ async function analyzePair(symbol, interval = "1m") {
 // API handler
 export default async function handler(req, res) {
   try {
-    const { pairs = "AUDUSDT,USDJPY,EURUSDT", interval = "1m" } = req.query;
+    const { pairs = "AUDUSD,USDJPY,EURUSD", interval = "1m" } = req.query;
 
     const pairList = pairs.split(",").map(p => p.trim().toUpperCase());
 
-    const results = await Promise.all(pairList.map(pair => analyzePair(pair, interval)));
+    const results = await Promise.all(pairList.map(pair => {
+      const binSymbol = pairMap[pair];
+      if (!binSymbol) return { pair, interval, signal: "ERROR", reasons: ["Unsupported pair"] };
+      return analyzePair(binSymbol, interval);
+    }));
 
     res.status(200).json(results);
   } catch (err) {
     res.status(500).json([{ pair: "ALL", signal: "ERROR", reasons: [err.message] }]);
   }
-      }
+}
